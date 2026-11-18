@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.coverage
+coverage.xml
+*.db
+.ruff_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Secrets: never commit these
+.env
+*.env
+!.env.example
+*.pem
+*.key
+azure-credentials*.json
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
