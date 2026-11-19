@@ -1,0 +1,79 @@
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-LocalSaPassword_2026!}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q 'SELECT 1' || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    entrypoint: ["/opt/mssql-tools18/bin/sqlcmd"]
+    command:
+      - -S
+      - sqlserver
+      - -U
+      - sa
+      - -P
+      - ${MSSQL_SA_PASSWORD:-LocalSaPassword_2026!}
+      - -C
+      - -b
+      - -i
+      - /scripts/init.sql
+    volumes:
+      - ./db/init.sql:/scripts/init.sql:ro
+    restart: "no"
+
+  conversation-api:
+    build:
+      context: ./services/conversation-api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mssql+pymssql://conversation_user:LocalConversation_2026!@sqlserver:1433/conversation_db
+      INTELLIGENCE_URL: http://intelligence-api:8000
+      RUN_MIGRATIONS: "1"
+      DB_WAIT_S: "180"
+      APP_VERSION: dev
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8001:8000"
+
+  intelligence-api:
+    build:
+      context: ./services/intelligence-api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mssql+pymssql://intelligence_user:LocalIntelligence_2026!@sqlserver:1433/intelligence_db
+      RUN_MIGRATIONS: "1"
+      DB_WAIT_S: "180"
+      APP_VERSION: dev
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8002:8000"
+
+volumes:
+  sqlserver_data:
