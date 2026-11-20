@@ -22,3 +22,25 @@ from app.main import app  # noqa: E402
 def client():
     with TestClient(app) as test_client:  # "with" runs start-up: migrations
         yield test_client
+
+
+@pytest.fixture
+def contact(client):
+    response = client.post("/contacts", json={"name": "Ana Test", "email": "ana@example.com"})
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.fixture
+def conversation(client, contact):
+    response = client.post(
+        "/conversations",
+        json={
+            "contact_id": contact["id"],
+            "subject": "Refund please",
+            "channel": "email",
+            "first_message": "My order arrived broken, I want a refund",
+        },
+    )
+    assert response.status_code == 201
+    return response.json()
