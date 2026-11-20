@@ -1,4 +1,4 @@
-"""Nebula Desk - Conversation API (skeleton: health, logging, migrations)."""
+"""Nebula Desk - Conversation API. Owns the inbox: contacts, conversations, messages, agents."""
 
 from contextlib import asynccontextmanager
 
@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from app import config
 from app.db import db_is_healthy, run_migrations, wait_for_db
 from app.logging_mw import configure_logging, log_requests
+from app.routes import agents, contacts, conversations
 
 configure_logging()
 
@@ -40,3 +41,8 @@ def health():
     return JSONResponse(
         status_code=503, content={"status": "error", "db": "down", "version": config.APP_VERSION}
     )
+
+
+app.include_router(contacts.router)
+app.include_router(conversations.router)
+app.include_router(agents.router)
