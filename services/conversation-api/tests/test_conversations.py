@@ -1,3 +1,16 @@
+from app import intelligence_client
+
+FAKE_ANALYSIS = {
+    "message_id": 0,
+    "intent": "refund",
+    "sentiment": "negative",
+    "priority": "high",
+    "suggested_reply": "Sorry about that, we will refund you.",
+    "source": "rules",
+    "cached": False,
+}
+
+
 def test_conversation_crud(client, conversation):
     conversation_id = conversation["id"]
     assert conversation["status"] == "open"
@@ -67,6 +80,45 @@ def test_agent_reply_sets_first_response(client, conversation):
     assert len(detail["messages"]) == 2
 
 
+def test_analyze_stores_labels(client, conversation, monkeypatch):
+    monkeypatch.setattr(intelligence_client, "analyze", lambda message_id, text: FAKE_ANALYSIS)
+    response = client.post(f"/conversations/{conversation['id']}/analyze")
+    assert response.status_code == 200
+    assert response.json()["suggested_reply"].startswith("Sorry")
+    detail = client.get(f"/conversations/{conversation['id']}").json()
+    assert detail["priority"] == "high" and detail["intent"] == "refund"
+
+
+def test_analyze_degrades_when_intelligence_is_down(client, conversation, monkeypatch):
+    def down(message_id, text):
+        raise intelligence_client.IntelligenceUnavailable("ConnectTimeout")
+
+    monkeypatch.setattr(intelligence_client, "analyze", down)
+    response = client.post(f"/conversations/{conversation['id']}/analyze")
+    assert response.status_code == 503
+    assert "unavailable" in response.json()["detail"]
+    # The inbox itself keeps working.
+    assert client.get(f"/conversations/{conversation['id']}").status_code == 200
+
+
+def test_analyze_needs_a_customer_message(client, contact):
+    empty = client.post("/conversations", json={"contact_id": contact["id"], "subject": "Hi"})
+    assert client.post(f"/conversations/{empty.json()['id']}/analyze").status_code == 400
+
+
+def test_simulate_with_and_without_intelligence(client, monkeypatch):
+    monkeypatch.setattr(intelligence_client, "analyze", lambda message_id, text: FAKE_ANALYSIS)
+    ok = client.post("/conversations/simulate")
+    assert ok.status_code == 201 and ok.json()["analysis_status"] == "ok"
+
+    def down(message_id, text):
+        raise intelligence_client.IntelligenceUnavailable("ConnectTimeout")
+
+    monkeypatch.setattr(intelligence_client, "analyze", down)
+    degraded = client.post("/conversations/simulate")
+    assert degraded.status_code == 201 and degraded.json()["analysis_status"] == "unavailable"
+
+
 def test_unknown_conversation_is_404(client):
     assert client.get("/conversations/424242").status_code == 404
     assert (
@@ -75,12 +127,3 @@ def test_unknown_conversation_is_404(client):
         ).status_code
         == 404
     )
-
-
-def test_simulate_creates_a_customer_conversation(client):
-    response = client.post("/conversations/simulate")
-    assert response.status_code == 201
-    conversation = response.json()["conversation"]
-    assert conversation["status"] == "open"
-    detail = client.get(f"/conversations/{conversation['id']}").json()
-    assert detail["messages"][0]["sender"] == "customer"

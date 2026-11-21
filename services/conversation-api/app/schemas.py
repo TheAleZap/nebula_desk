@@ -79,6 +79,9 @@ class ConversationOut(BaseModel):
     channel: Channel
     status: Status
     assigned_agent_id: int | None
+    intent: str
+    sentiment: str
+    priority: str
     created_at: datetime
     updated_at: datetime
     first_response_at: datetime | None
@@ -90,5 +93,17 @@ class ConversationDetail(ConversationOut):
     messages: list[MessageOut]
 
 
+class AnalysisOut(BaseModel):
+    conversation_id: int
+    message_id: int
+    intent: str
+    sentiment: str
+    priority: str
+    suggested_reply: str
+    source: str
+    cached: bool = False
+
+
 class SimulateOut(BaseModel):
     conversation: ConversationOut
+    analysis_status: Literal["ok", "unavailable"]
