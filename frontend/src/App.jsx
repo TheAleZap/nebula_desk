@@ -2,10 +2,12 @@ import { useState } from "react";
 import Inbox from "./pages/Inbox.jsx";
 import ConversationView from "./pages/ConversationView.jsx";
 import Contacts from "./pages/Contacts.jsx";
+import Metrics from "./pages/Metrics.jsx";
 
 const TABS = [
   ["inbox", "Inbox"],
   ["contacts", "Contacts"],
+  ["metrics", "Metrics"],
 ];
 
 export default function App() {
@@ -32,8 +34,10 @@ export default function App() {
           <ConversationView id={openId} onBack={() => setOpenId(null)} />
         ) : page === "inbox" ? (
           <Inbox onOpen={setOpenId} />
-        ) : (
+        ) : page === "contacts" ? (
           <Contacts />
+        ) : (
+          <Metrics />
         )}
       </main>
     </div>
