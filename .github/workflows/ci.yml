@@ -102,6 +102,14 @@ jobs:
               sleep 5
             done
           done
+      - name: Cross-service flow (Conversation API -> Intelligence API)
+        run: curl -fsS -X POST http://localhost:8001/conversations/simulate | grep '"analysis_status":"ok"'
+      - name: Partial failure is handled (Intelligence stopped)
+        run: |
+          docker compose stop intelligence-api
+          curl -fsS http://localhost:8001/conversations > /dev/null
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8001/conversations/1/analyze)
+          test "$code" = "503"
       - name: Logs on failure
         if: failure()
         run: docker compose logs
