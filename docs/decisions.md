@@ -33,7 +33,13 @@ Format: **Context · Decision · Alternatives · Consequences.**
 ## ADR-3 — Deployment and pipeline: Container Apps, GHCR, OIDC, Static Web Apps
 *Author: Alejandro Zapata*
 
-_To be written by Alejandro._
+**Context.** The stack is fixed (containers, Azure SQL serverless, GitHub Actions, GHCR, Container Apps, Static Web Apps) in the group's resource group `rg-sdd-3a-g6`, with nothing changed manually after the initial setup.
+
+**Decision.** `infra/setup.sh` (Azure CLI, run once) creates the SQL server and two serverless databases (15-min auto-pause, 2 GB), the Container Apps environment, two Container Apps (min 0, max 1 replica) and the Static Web App, and registers GitHub's OIDC token on the identity `sdd-3a-g6-github`. **CI** (every PR and branch push): lint, format check, tests with >=70% coverage per service, UI build, image builds, and the full compose stack on SQL Server including a cross-service and a partial-failure check. **CD** (merge to `main`): runs CI, pushes images tagged with the commit SHA to GHCR, updates both Container Apps, waits until `/health` returns 200 **with that SHA** (up to ~10 min to allow for database resume), builds the UI with a generated `config.js` holding the service URLs, deploys it to the Static Web App, and smoke-tests the live URL.
+
+**Alternatives.** Bicep/Terraform IaC (credited, but slower for us to learn this week); Azure Container Registry (fixed monthly cost); a service-principal secret (an Azure password stored in GitHub, which OIDC avoids).
+
+**Consequences.** No Azure password exists anywhere. Scale-to-zero means the first request after idle can take ~1 minute (cold start + database resume); the UI retries and shows a "starting up" message. Migrations run at start-up with max 1 replica, so they never run twice in parallel. Giving the identity its Contributor role needs a subscription owner, so our first deploy waited on that permission; everything that did not need Azure went ahead in the meantime.
 
 ---
 
