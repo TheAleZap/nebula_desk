@@ -46,7 +46,13 @@ Format: **Context · Decision · Alternatives · Consequences.**
 ## ADR-4 — The AI feature: rules first, optional LLM, cache and rate limit
 *Author: Alex Garcia*
 
-_To be written by Alex._
+**Context.** The feature beyond CRUD is classifying messages and suggesting replies. An LLM costs money, needs a secret, and can be slow or down.
+
+**Decision.** The core is a **deterministic rule-based classifier** (keywords for intent, word lists for sentiment, rules for priority, templates for replies). An **optional LLM** (OpenAI-compatible API) only rewrites the suggested reply, and only if `LLM_API_KEY` is configured. Cost is kept low with three controls: results are **cached** in the database by a hash of the text, calls are **rate-limited** (10/minute), and each call has a **4-second timeout**. Any LLM failure falls back to the rule-based reply.
+
+**Alternatives.** LLM for everything (cost, non-deterministic tests, single point of failure); a trained ML model (no time, no data).
+
+**Consequences.** The feature works with no key and no cost, tests are deterministic, and there are two levels of degradation: LLM down → rule-based reply; Intelligence API down → the inbox keeps working with an "analysis unavailable" message.
 
 ---
 
