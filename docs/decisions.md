@@ -66,4 +66,10 @@ _To be written by Kohana._
 ## ADR-6 — Scope and team workflow
 *Author: Alesia Dako*
 
-_To be written by Alesia._
+**Context.** Two short sprints, run in parallel with Assignment 2, and a team of six.
+
+**Decision.** Keep the MVP small: full CRUD on contacts and conversations, messages as children of a conversation, agents **seeded** (no CRUD, hard-coded demo user, no authentication), assignment stored as a column on the conversation. Simulated channels via a "Simulate incoming message" button instead of real integrations. Every change reaches `main` through a reviewed pull request (branch protection with required CI checks).
+
+**Alternatives.** The full proposal including knowledge base and automatic AI replies (kept as stretch goals for a future sprint).
+
+**Consequences.** A working, deployed product every day from Sprint 1 on; stretch goals are listed in the backlog for the next sprint.
