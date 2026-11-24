@@ -61,7 +61,13 @@ Format: **Context · Decision · Alternatives · Consequences.**
 ## ADR-5 — Monitoring: one JSON log line per request, Log Analytics workbook, one SLO
 *Author: Kohana Rakipi*
 
-_To be written by Kohana._
+**Context.** We need request count, error rate and response time visible in Azure, plus one Service Level Objective, while keeping log volume low.
+
+**Decision.** Each service writes **one JSON line per request** to stdout (`service, method, path, status, duration_ms`), INFO level, no request bodies. Container Apps sends stdout to the environment's Log Analytics workspace, where KQL queries in `docs/monitoring.md` compute the metrics. They are saved in an **Azure Workbook** (exported to `monitoring/workbook.json`). **SLO:** 99% of `GET /conversations` requests succeed in under 500 ms over 7 days.
+
+**Alternatives.** Application Insights SDK (another dependency and resource); Prometheus/Grafana (out of scope).
+
+**Consequences.** It is simple and cheap. Durations are measured inside the app, so time spent waking a container from zero is not included in the SLI; we state this limitation.
 
 ---
 
