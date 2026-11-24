@@ -46,7 +46,8 @@ Format: **Context · Decision · Alternatives · Consequences.**
 ## ADR-4 — The AI feature: rules first, optional LLM, cache and rate limit
 *Author: Alex Garcia*
 
-_To be written by Alex._
+We decided (21 Nov, task A6) to run rules-only: no LLM key is configured, because the rubric gives no credit for one, a paid key is one more secret that could leak, and an outside service could fail during the live demo. The LLM path stays in the code, off.
+
 
 ---
 
@@ -61,3 +62,5 @@ _To be written by Kohana._
 *Author: Alesia Dako*
 
 _To be written by Alesia._
+
+
