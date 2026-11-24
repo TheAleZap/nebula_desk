@@ -38,6 +38,10 @@ class Conversation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     first_response_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Added by migration 0002 (copied from the Intelligence API's analysis)
+    intent: Mapped[str] = mapped_column(String(30), default="unknown")
+    sentiment: Mapped[str] = mapped_column(String(20), default="neutral")
+    priority: Mapped[str] = mapped_column(String(20), default="normal")
 
     contact: Mapped[Contact] = relationship()
     agent: Mapped[Agent | None] = relationship()

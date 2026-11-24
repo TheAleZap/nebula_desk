@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from app import config
 from app.db import db_is_healthy, run_migrations, wait_for_db
 from app.logging_mw import configure_logging, log_requests
-from app.routes import agents, contacts, conversations
+from app.routes import agents, contacts, conversations, metrics
 
 configure_logging()
 
@@ -46,3 +46,4 @@ def health():
 app.include_router(contacts.router)
 app.include_router(conversations.router)
 app.include_router(agents.router)
+app.include_router(metrics.router)

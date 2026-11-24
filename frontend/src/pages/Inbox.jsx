@@ -30,7 +30,11 @@ export default function Inbox({ onOpen }) {
   const simulate = async () => {
     try {
       const result = await api.simulate();
-      setNotice(`New ${result.conversation.channel} message from ${result.conversation.contact.name}.`);
+      setNotice(
+        result.analysis_status === "ok"
+          ? `New ${result.conversation.channel} message from ${result.conversation.contact.name}, classified by AI.`
+          : "New message received, but AI analysis is unavailable right now. The inbox still works."
+      );
       load();
     } catch (e) {
       setError(e.message);
@@ -73,7 +77,7 @@ export default function Inbox({ onOpen }) {
 
       <table>
         <thead>
-          <tr><th>Subject</th><th>Contact</th><th>Channel</th><th>Status</th><th>Agent</th></tr>
+          <tr><th>Subject</th><th>Contact</th><th>Channel</th><th>Status</th><th>Priority</th><th>Intent</th><th>Agent</th></tr>
         </thead>
         <tbody>
           {conversations.map((c) => (
@@ -82,11 +86,13 @@ export default function Inbox({ onOpen }) {
               <td>{c.contact.name}</td>
               <td>{c.channel}</td>
               <td><span className={`badge ${c.status}`}>{c.status}</span></td>
+              <td><span className={`badge p-${c.priority}`}>{c.priority}</span></td>
+              <td>{c.intent}</td>
               <td>{c.agent?.name || "Unassigned"}</td>
             </tr>
           ))}
           {!loading && conversations.length === 0 && (
-            <tr><td colSpan="5" className="muted">No conversations yet. Click "Simulate incoming message".</td></tr>
+            <tr><td colSpan="7" className="muted">No conversations yet. Click "Simulate incoming message".</td></tr>
           )}
         </tbody>
       </table>
