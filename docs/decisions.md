@@ -33,14 +33,26 @@ Format: **Context · Decision · Alternatives · Consequences.**
 ## ADR-3 — Deployment and pipeline: Container Apps, GHCR, OIDC, Static Web Apps
 *Author: Alejandro Zapata*
 
-_To be written by Alejandro._
+**Context.** The stack is fixed (containers, Azure SQL serverless, GitHub Actions, GHCR, Container Apps, Static Web Apps) in the group's resource group `rg-sdd-3a-g6`, with nothing changed manually after the initial setup.
+
+**Decision.** `infra/setup.sh` (Azure CLI, run once) creates the SQL server and two serverless databases (15-min auto-pause, 2 GB), the Container Apps environment, two Container Apps (min 0, max 1 replica) and the Static Web App, and registers GitHub's OIDC token on the identity `sdd-3a-g6-github`. **CI** (every PR and branch push): lint, format check, tests with >=70% coverage per service, UI build, image builds, and the full compose stack on SQL Server including a cross-service and a partial-failure check. **CD** (merge to `main`): runs CI, pushes images tagged with the commit SHA to GHCR, updates both Container Apps, waits until `/health` returns 200 **with that SHA** (up to ~10 min to allow for database resume), builds the UI with a generated `config.js` holding the service URLs, deploys it to the Static Web App, and smoke-tests the live URL.
+
+**Alternatives.** Bicep/Terraform IaC (credited, but slower for us to learn this week); Azure Container Registry (fixed monthly cost); a service-principal secret (an Azure password stored in GitHub, which OIDC avoids).
+
+**Consequences.** No Azure password exists anywhere. Scale-to-zero means the first request after idle can take ~1 minute (cold start + database resume); the UI retries and shows a "starting up" message. Migrations run at start-up with max 1 replica, so they never run twice in parallel. Giving the identity its Contributor role needs a subscription owner, so our first deploy waited on that permission; everything that did not need Azure went ahead in the meantime.
 
 ---
 
 ## ADR-4 — The AI feature: rules first, optional LLM, cache and rate limit
 *Author: Alex Garcia*
 
-_To be written by Alex._
+**Context.** The feature beyond CRUD is classifying messages and suggesting replies. An LLM costs money, needs a secret, and can be slow or down.
+
+**Decision.** The core is a **deterministic rule-based classifier** (keywords for intent, word lists for sentiment, rules for priority, templates for replies). An **optional LLM** (OpenAI-compatible API) only rewrites the suggested reply, and only if `LLM_API_KEY` is configured. Cost is kept low with three controls: results are **cached** in the database by a hash of the text, calls are **rate-limited** (10/minute), and each call has a **4-second timeout**. Any LLM failure falls back to the rule-based reply.
+
+**Alternatives.** LLM for everything (cost, non-deterministic tests, single point of failure); a trained ML model (no time, no data).
+
+**Consequences.** The feature works with no key and no cost, tests are deterministic, and there are two levels of degradation: LLM down → rule-based reply; Intelligence API down → the inbox keeps working with an "analysis unavailable" message.
 
 ---
 
@@ -54,4 +66,10 @@ _To be written by Kohana._
 ## ADR-6 — Scope and team workflow
 *Author: Alesia Dako*
 
-_To be written by Alesia._
+**Context.** Two short sprints, run in parallel with Assignment 2, and a team of six.
+
+**Decision.** Keep the MVP small: full CRUD on contacts and conversations, messages as children of a conversation, agents **seeded** (no CRUD, hard-coded demo user, no authentication), assignment stored as a column on the conversation. Simulated channels via a "Simulate incoming message" button instead of real integrations. Every change reaches `main` through a reviewed pull request (branch protection with required CI checks).
+
+**Alternatives.** The full proposal including knowledge base and automatic AI replies (kept as stretch goals for a future sprint).
+
+**Consequences.** A working, deployed product every day from Sprint 1 on; stretch goals are listed in the backlog for the next sprint.
