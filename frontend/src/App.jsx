@@ -19,7 +19,7 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>Nebula Desk</h1>
+        <h1>Nebula Desk · Support</h1>
         <nav>
           {TABS.map(([key, label]) => (
             <button key={key} className={page === key && !openId ? "active" : ""} onClick={() => go(key)}>
