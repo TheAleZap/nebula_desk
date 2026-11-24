@@ -54,6 +54,8 @@ Format: **Context · Decision · Alternatives · Consequences.**
 
 **Consequences.** The feature works with no key and no cost, tests are deterministic, and there are two levels of degradation: LLM down → rule-based reply; Intelligence API down → the inbox keeps working with an "analysis unavailable" message.
 
+**Update.** We decided (21 Nov, task A6) to run rules-only: no LLM key is configured, because the rubric gives no credit for one, a paid key is one more secret that could leak, and an outside service could fail during the live demo. The LLM path stays in the code, off.
+
 ---
 
 ## ADR-5 — Monitoring: one JSON log line per request, Log Analytics workbook, one SLO
