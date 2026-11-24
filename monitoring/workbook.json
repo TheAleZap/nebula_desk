@@ -1,0 +1,73 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let requests = ContainerAppConsoleLogs_CL\n    | where ContainerAppName_s startswith \"sdd-3a-g6-\"\n    | where Log_s startswith \"{\" and Log_s has \"duration_ms\"\n    | extend r = parse_json(Log_s)\n    | project TimeGenerated, service = tostring(r.service), method = tostring(r.method),\n              path = tostring(r.path), status = toint(r.status), duration_ms = todouble(r.duration_ms);\nrequests\n| where TimeGenerated > ago(24h)\n| summarize requests = count() by service, bin(TimeGenerated, 5m)\n| render timechart",
+        "size": 1,
+        "title": "Request count",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart"
+      },
+      "name": "Requests per service"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let requests = ContainerAppConsoleLogs_CL\n    | where ContainerAppName_s startswith \"sdd-3a-g6-\"\n    | where Log_s startswith \"{\" and Log_s has \"duration_ms\"\n    | extend r = parse_json(Log_s)\n    | project TimeGenerated, service = tostring(r.service), method = tostring(r.method),\n              path = tostring(r.path), status = toint(r.status), duration_ms = todouble(r.duration_ms);\nrequests\n| where TimeGenerated > ago(24h)\n| summarize total = count(), errors = countif(status >= 500) by service, bin(TimeGenerated, 15m)\n| extend error_rate_pct = round(100.0 * errors / total, 2)\n| project TimeGenerated, service, error_rate_pct\n| render timechart",
+        "size": 0,
+        "title": "Error rate",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart"
+      },
+      "name": "Error rate"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let requests = ContainerAppConsoleLogs_CL\n    | where ContainerAppName_s startswith \"sdd-3a-g6-\"\n    | where Log_s startswith \"{\" and Log_s has \"duration_ms\"\n    | extend r = parse_json(Log_s)\n    | project TimeGenerated, service = tostring(r.service), method = tostring(r.method),\n              path = tostring(r.path), status = toint(r.status), duration_ms = todouble(r.duration_ms);\nrequests\n| where TimeGenerated > ago(24h)\n| summarize percentiles(duration_ms, 50, 95, 99) by service, bin(TimeGenerated, 15m)\n| render timechart\n",
+        "size": 0,
+        "title": "Response time",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart"
+      },
+      "name": "Response time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let requests = ContainerAppConsoleLogs_CL\n    | where ContainerAppName_s startswith \"sdd-3a-g6-\"\n    | where Log_s startswith \"{\" and Log_s has \"duration_ms\"\n    | extend r = parse_json(Log_s)\n    | project TimeGenerated, service = tostring(r.service), method = tostring(r.method),\n              path = tostring(r.path), status = toint(r.status), duration_ms = todouble(r.duration_ms);\nrequests\n| where TimeGenerated > ago(7d)\n| where service == \"conversation-api\" and method == \"GET\" and path == \"/conversations\"\n| summarize total = count(), good = countif(status < 500 and duration_ms < 500)\n| extend sli_pct = round(100.0 * good / total, 2), slo_target_pct = 99.0\n| extend slo_met = sli_pct >= slo_target_pct, error_budget_left = good - toint(ceiling(total * 0.99))\n",
+        "size": 0,
+        "title": "SLO",
+        "timeContext": {
+          "durationMs": 86400000
+        },
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "visualization": "timechart"
+      },
+      "name": "SLO"
+    }
+  ],
+  "fallbackResourceIds": [
+    "/subscriptions/e0b9cada-61bc-4b5a-bd7a-52c606726b3b/resourcegroups/rg-sdd-3a-g6/providers/microsoft.operationalinsights/workspaces/workspace-rgsdd3ag6dhtk"
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
