@@ -35,6 +35,17 @@ SQL_ADMIN_PASSWORD="$(gen_password)"
 CONVERSATION_DB_PASSWORD="$(gen_password)"
 INTELLIGENCE_DB_PASSWORD="$(gen_password)"
 
+# Fail early instead of half-way: Cloud Shell has no sqlcmd and a new Cloud Shell
+# session is not logged in to GitHub. The script stops at step 3 or 7 without them.
+if ! command -v sqlcmd >/dev/null; then
+  echo "== Installing sqlcmd (go-sqlcmd) into ~/bin"
+  mkdir -p "$HOME/bin"
+  curl -sSL https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-amd64.tar.bz2 \
+    | tar -xj -C "$HOME/bin"
+  export PATH="$HOME/bin:$PATH"
+fi
+gh auth status > /dev/null 2>&1 || { echo "Run 'gh auth login' first, then run this script again."; exit 1; }
+
 echo "== 0. Account and what already exists in the resource group"
 az account set --subscription "$SUBSCRIPTION_ID"
 az account show --query "{subscription:name, tenant:tenantId}" -o table
@@ -58,9 +69,11 @@ echo "== 3. One contained user per database (firewall opened to this shell's IP,
 MY_IP="$(curl -s https://api.ipify.org)"
 az sql server firewall-rule create -g "$RG" -s "$SQL_SERVER" -n setup-temp \
   --start-ip-address "$MY_IP" --end-ip-address "$MY_IP" -o none
+sleep 20   # the new firewall rule takes a few seconds to apply
 create_user() { # $1 = database, $2 = user, $3 = password
-  sqlcmd -S "tcp:$SQL_HOST,1433" -d "$1" -U "$SQL_ADMIN" -P "$SQL_ADMIN_PASSWORD" -b -Q "
-    IF USER_ID('$2') IS NULL CREATE USER [$2] WITH PASSWORD = '$3';
+  sqlcmd -S "tcp:$SQL_HOST,1433" -d "$1" -U "$SQL_ADMIN" -P "$SQL_ADMIN_PASSWORD" -b -l 60 -Q "
+    IF USER_ID('$2') IS NULL CREATE USER [$2] WITH PASSWORD = '$3'
+    ELSE ALTER USER [$2] WITH PASSWORD = '$3';
     ALTER ROLE db_ddladmin ADD MEMBER [$2];
     ALTER ROLE db_datareader ADD MEMBER [$2];
     ALTER ROLE db_datawriter ADD MEMBER [$2];"
