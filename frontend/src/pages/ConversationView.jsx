@@ -4,7 +4,11 @@ import { api } from "../api.js";
 export default function ConversationView({ id, onBack }) {
   const [conversation, setConversation] = useState(null);
   const [agents, setAgents] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
+  const [aiError, setAiError] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
   const [reply, setReply] = useState("");
+  const [fromSuggestion, setFromSuggestion] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -23,11 +27,26 @@ export default function ConversationView({ id, onBack }) {
     try { setConversation(await api.updateConversation(id, data)); } catch (e) { setError(e.message); }
   };
 
+  const runAnalysis = async () => {
+    setAiLoading(true);
+    setAiError("");
+    try {
+      setAnalysis(await api.analyze(id));
+      load();
+    } catch (e) {
+      setAnalysis(null);
+      setAiError(e.message); // e.g. "AI analysis is unavailable right now…"
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const send = async (event) => {
     event.preventDefault();
     try {
-      await api.addMessage(id, { sender: "agent", body: reply });
+      await api.addMessage(id, { sender: "agent", body: reply, from_suggestion: fromSuggestion });
       setReply("");
+      setFromSuggestion(false);
       load();
     } catch (e) {
       setError(e.message);
@@ -74,7 +93,7 @@ export default function ConversationView({ id, onBack }) {
           <div className="thread">
             {conversation.messages.map((m) => (
               <div key={m.id} className={`message ${m.sender}`}>
-                <small>{m.sender}</small>
+                <small>{m.sender}{m.from_suggestion ? " · from AI suggestion" : ""}</small>
                 <p>{m.body}</p>
               </div>
             ))}
@@ -86,6 +105,24 @@ export default function ConversationView({ id, onBack }) {
             <button className="primary" type="submit">Send reply</button>
           </form>
         </div>
+
+        <aside className="card ai">
+          <h3>AI assistant</h3>
+          <p className="muted">
+            Intent: <b>{conversation.intent}</b> · Sentiment: <b>{conversation.sentiment}</b> · Priority: <b>{conversation.priority}</b>
+          </p>
+          <button onClick={runAnalysis} disabled={aiLoading}>{aiLoading ? "Analyzing…" : "Analyze & suggest reply"}</button>
+          {aiError && <p className="error">{aiError}</p>}
+          {analysis && (
+            <>
+              <p className="suggestion">{analysis.suggested_reply}</p>
+              <small className="muted">source: {analysis.source}{analysis.cached ? " (cached)" : ""}</small>
+              <button className="primary" onClick={() => { setReply(analysis.suggested_reply); setFromSuggestion(true); }}>
+                Use suggestion
+              </button>
+            </>
+          )}
+        </aside>
       </div>
     </section>
   );

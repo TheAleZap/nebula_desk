@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import intelligence_client
 from app.db import get_session
 from app.models import Agent, Contact, Conversation, Message, utcnow
 from app.samples import SAMPLE_MESSAGES
 from app.schemas import (
+    AnalysisOut,
     ConversationDetail,
     ConversationIn,
     ConversationOut,
@@ -18,6 +20,11 @@ from app.schemas import (
 )
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
+
+UNAVAILABLE = (
+    "AI analysis is unavailable right now: the Intelligence API did not answer in time. "
+    "The inbox keeps working; try again in a moment."
+)
 
 
 def _get(session: Session, conversation_id: int) -> Conversation:
@@ -34,6 +41,20 @@ def _add_message(session: Session, conversation: Conversation, body: MessageIn) 
         conversation.first_response_at = utcnow()
     conversation.updated_at = utcnow()
     return message
+
+
+def _analyze(session: Session, conversation: Conversation) -> dict:
+    """Send the latest customer message across the seam and keep the labels."""
+    customer_messages = [m for m in conversation.messages if m.sender == "customer"]
+    if not customer_messages:
+        raise HTTPException(400, "Conversation has no customer message to analyze")
+    latest = customer_messages[-1]
+    result = intelligence_client.analyze(latest.id, latest.body)
+    conversation.intent = result["intent"]
+    conversation.sentiment = result["sentiment"]
+    conversation.priority = result["priority"]
+    session.commit()
+    return {"conversation_id": conversation.id, **result, "message_id": latest.id}
 
 
 @router.get("", response_model=list[ConversationOut])
@@ -112,6 +133,19 @@ def add_message(conversation_id: int, body: MessageIn, session: Session = Depend
     return message
 
 
+@router.post(
+    "/{conversation_id}/analyze",
+    response_model=AnalysisOut,
+    responses={503: {"description": "Intelligence API unavailable (designed degradation)"}},
+)
+def analyze_conversation(conversation_id: int, session: Session = Depends(get_session)):
+    conversation = _get(session, conversation_id)
+    try:
+        return _analyze(session, conversation)
+    except intelligence_client.IntelligenceUnavailable:
+        raise HTTPException(503, UNAVAILABLE) from None
+
+
 @router.post("/simulate", response_model=SimulateOut, status_code=201)
 def simulate_incoming_message(session: Session = Depends(get_session)):
     """Pretend a customer wrote in on chat, email or WhatsApp."""
@@ -129,4 +163,10 @@ def simulate_incoming_message(session: Session = Depends(get_session)):
     _add_message(session, conversation, MessageIn(sender="customer", body=sample["body"]))
     session.commit()
     session.refresh(conversation)
-    return {"conversation": conversation}
+    try:
+        _analyze(session, conversation)
+        status = "ok"
+    except intelligence_client.IntelligenceUnavailable:
+        status = "unavailable"
+    session.refresh(conversation)
+    return {"conversation": conversation, "analysis_status": status}
