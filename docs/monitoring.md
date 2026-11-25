@@ -82,7 +82,9 @@ requests
 | where service == "conversation-api" and method == "GET" and path == "/conversations"
 | summarize total = count(), good = countif(status < 500 and duration_ms < 500)
 | extend sli_pct = round(100.0 * good / total, 2), slo_target_pct = 99.0
-| extend slo_met = sli_pct >= slo_target_pct, error_budget_left = good - toint(ceiling(total * 0.99))
+| extend slo_met = sli_pct >= slo_target_pct,
+         failed_requests_allowed = round(total * (100 - slo_target_pct) / 100, 2),
+         error_budget_left_pct = round(100.0 * (sli_pct - slo_target_pct) / (100 - slo_target_pct), 1)
 ```
 
 **Why this SLO:** the inbox list is the page agents open all day; if it is slow or failing, nothing else matters.
