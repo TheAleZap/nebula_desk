@@ -25,6 +25,8 @@ export default function Metrics() {
           <div className="card stat"><span>{support.by_status.pending}</span>Pending</div>
           <div className="card stat"><span>{support.by_status.resolved}</span>Resolved</div>
           <div className="card stat"><span>{support.by_priority.high}</span>High priority</div>
+          <div className="card stat"><span>{support.by_priority.normal}</span>Normal priority</div>
+          <div className="card stat"><span>{support.by_priority.low}</span>Low priority</div>
           <div className="card stat">
             <span>{support.avg_first_response_minutes ?? "–"}</span>Avg first response (min)
           </div>
