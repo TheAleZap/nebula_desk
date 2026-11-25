@@ -119,6 +119,29 @@ def test_simulate_with_and_without_intelligence(client, monkeypatch):
     assert degraded.status_code == 201 and degraded.json()["analysis_status"] == "unavailable"
 
 
+def test_failed_analysis_keeps_previous_labels(client, conversation, monkeypatch):
+    monkeypatch.setattr(intelligence_client, "analyze", lambda message_id, text: FAKE_ANALYSIS)
+    assert client.post(f"/conversations/{conversation['id']}/analyze").status_code == 200
+
+    def down(message_id, text):
+        raise intelligence_client.IntelligenceUnavailable("ReadTimeout")
+
+    monkeypatch.setattr(intelligence_client, "analyze", down)
+    assert client.post(f"/conversations/{conversation['id']}/analyze").status_code == 503
+    detail = client.get(f"/conversations/{conversation['id']}").json()
+    assert detail["intent"] == "refund" and detail["priority"] == "high"
+
+
+def test_simulate_avoids_copies_of_open_conversations(client, monkeypatch):
+    monkeypatch.setattr(intelligence_client, "analyze", lambda message_id, text: FAKE_ANALYSIS)
+    open_subjects = {c["subject"] for c in client.get("/conversations?status=open").json()}
+    new_subjects = [
+        client.post("/conversations/simulate").json()["conversation"]["subject"] for _ in range(3)
+    ]
+    assert len(set(new_subjects)) == 3
+    assert not set(new_subjects) & open_subjects
+
+
 def test_unknown_conversation_is_404(client):
     assert client.get("/conversations/424242").status_code == 404
     assert (

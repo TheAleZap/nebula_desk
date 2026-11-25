@@ -149,7 +149,12 @@ def analyze_conversation(conversation_id: int, session: Session = Depends(get_se
 @router.post("/simulate", response_model=SimulateOut, status_code=201)
 def simulate_incoming_message(session: Session = Depends(get_session)):
     """Pretend a customer wrote in on chat, email or WhatsApp."""
-    sample = random.choice(SAMPLE_MESSAGES)
+    # Prefer a sample whose subject is not already open, so the demo inbox has no exact copies.
+    open_subjects = set(
+        session.scalars(select(Conversation.subject).where(Conversation.status != "resolved"))
+    )
+    fresh = [s for s in SAMPLE_MESSAGES if s["subject"] not in open_subjects]
+    sample = random.choice(fresh or SAMPLE_MESSAGES)
     contact = session.scalar(select(Contact).where(Contact.email == sample["email"]))
     if contact is None:
         contact = Contact(name=sample["name"], email=sample["email"])
