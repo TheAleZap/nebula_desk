@@ -34,6 +34,11 @@ Accepted by the Product Owner on the live URL (https://thankful-river-0e059a403.
 ## Sprint Review (25 Nov) — feedback
 The review in class was cancelled; we held it as an internal team call on 25 Nov.
 
+- All 12 selected stories (US-1 to US-12) were shown on the live URL and accepted by the Product Owner.
+- For the class presentation we open the live site a minute before starting, so the first request after scale-to-zero does not wait on the cold start.
+- The monitoring slide must label p50/p95/p99 and show the SLO query result, so the dashboard and the SLO tell the same story.
+- Next sprint: US-13 (knowledge base) and US-14 (automatic replies) stay first in the Product Backlog.
+
 ## Retrospective agreements
 - **Raise blockers the day they appear.** Communicate blockers as soon as they arise, clearly explaining their impact on the sprint and what is needed from the team to resolve them, and keep working on independent tasks while waiting for external dependencies. (Trigger: the Azure role for the pipeline took from 19 to 24 Nov.)
 - **Small, assigned tasks and a live board.** Break work down into smaller, clearly assigned tasks and keep the GitHub Project updated, so everyone knows what is being worked on, what is blocked and what is ready for review.
